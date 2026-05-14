@@ -1,0 +1,11 @@
+node_modules/
+sessions/
+.wwebjs_cache/
+logs/
+data/config.json
+data/qr-code.html
+data/media/
+data/*.json
+.env
+*.log
+.DS_Store

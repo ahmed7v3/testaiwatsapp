@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة تحكم بوت واتساب</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#07070e;--surface:#111120;--surface2:#1a1a30;--surface3:#242445;--border:#2a2a50;--text:#d0d0e0;--text2:#8888aa;--accent:#6C5CE7;--accent2:#A29BFE;--teal:#00CEC9;--red:#ff6b6b;--green:#00e676;--yellow:#ffd93d;--radius:12px;--shadow:0 8px 32px rgba(0,0,0,.4);--transition:.2s ease}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans Arabic','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+/* Login */
+.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at top right,#1a1a3e,var(--bg) 60%)}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:48px 40px;width:400px;max-width:90vw;box-shadow:var(--shadow);text-align:center}
+.login-card h1{font-size:24px;margin-bottom:4px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.login-card p{color:var(--text2);font-size:14px;margin-bottom:28px}
+.login-card input{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:15px;outline:none;transition:var(--transition)}
+.login-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,92,231,.2)}
+.login-card button{width:100%;margin-top:16px;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:var(--transition)}
+.login-card button:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(108,92,231,.4)}
+.login-error{color:var(--red);font-size:13px;margin-top:12px;display:none}
+
+/* App Layout */
+.app{display:flex;height:100vh;display:none}
+.sidebar{width:220px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:20px 16px 12px;border-bottom:1px solid var(--border)}
+.sidebar-header h2{font-size:15px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sidebar-header span{font-size:11px;color:var(--text2)}
+.sidebar-nav{flex:1;padding:8px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:var(--transition);margin-bottom:2px}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface3);color:#fff}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-status{padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)}
+.sidebar-status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:6px}
+.dot.green{background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+.dot.yellow{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+
+/* Main Content */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.main-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.main-header h1{font-size:18px;font-weight:600}
+.main-header .info{font-size:12px;color:var(--text2)}
+.main-content{flex:1;padding:24px;overflow-y:auto}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Cards Grid */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:var(--transition)}
+.card:hover{border-color:var(--surface3)}
+.card h3{font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:600}
+.card .value{font-size:26px;font-weight:700}
+.card .value.green{color:var(--green)}
+.card .value.teal{color:var(--teal)}
+.card .value.accent{color:var(--accent2)}
+
+/* Sections */
+.section{margin-bottom:28px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.section-header h2{font-size:16px;font-weight:600}
+.section-header .badge{font-size:11px;padding:2px 10px;border-radius:10px;background:var(--surface3);color:var(--text2)}
+
+/* Form Controls */
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.form-group label{font-size:12px;color:var(--text2);font-weight:600}
+.form-group input,.form-group select,.form-group textarea{padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;outline:none;transition:var(--transition);font-family:inherit}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,92,231,.15)}
+.form-group textarea{resize:vertical;min-height:80px;font-size:13px;line-height:1.6}
+.form-group select{cursor:pointer}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* Toggle Switch */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-row .label-group label{font-size:14px;font-weight:500}
+.toggle-row .label-group .desc{font-size:11px;color:var(--text2);margin-top:2px}
+.switch{position:relative;width:44px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch .slider{position:absolute;inset:0;background:var(--surface3);border-radius:12px;cursor:pointer;transition:var(--transition)}
+.switch .slider::before{content:'';position:absolute;width:18px;height:18px;top:3px;right:3px;background:#fff;border-radius:50%;transition:var(--transition)}
+.switch input:checked+.slider{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.switch input:checked+.slider::before{transform:translateX(-20px)}
+
+/* Buttons */
+.buttons{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:var(--transition);display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(108,92,231,.3)}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--surface3)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{opacity:.9}
+.btn-sm{padding:5px 12px;font-size:12px}
+
+/* Log Panel */
+.log-panel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;height:320px;overflow-y:auto;font-family:'SF Mono','Fira Code','Cascadia Code',monospace;font-size:12px;line-height:1.7;direction:ltr}
+.log-entry{margin-bottom:2px}
+.log-entry .time{color:var(--text2);margin-left:8px}
+.log-entry.in{color:var(--green)}
+.log-entry.out{color:var(--teal)}
+.log-entry .contact{color:var(--accent2)}
+.log-entry.sys-info{color:var(--text2)}
+.log-entry.sys-success{color:var(--green)}
+.log-entry.sys-error{color:var(--red)}
+.log-entry.sys-warn{color:var(--yellow)}
+
+/* Rule Cards */
+.rule-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.rule-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.rule-name{font-weight:600;font-size:14px}
+.rule-keywords{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.keyword-tag{background:var(--surface3);padding:2px 8px;border-radius:4px;font-size:11px;color:var(--accent2)}
+.rule-response-preview{font-size:12px;color:var(--text2);padding:8px;background:var(--surface);border-radius:6px;word-break:break-all;margin-top:8px}
+.rule-type-badge{font-size:10px;padding:2px 8px;border-radius:4px;background:var(--accent);color:#fff;display:inline-block;margin-right:8px}
+
+/* Instance Cards */
+    .instance-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.instance-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.instance-name{font-weight:600;font-size:14px}
+.instance-actions{display:flex;gap:6px;align-items:center}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:24px;text-align:center;cursor:pointer;transition:var(--transition);margin-bottom:12px}
+.upload-zone:hover{border-color:var(--accent);background:var(--surface2)}
+.upload-zone .icon{font-size:32px;opacity:.4;margin-bottom:8px}
+
+/* Empty State */
+.empty-state{text-align:center;padding:40px;color:var(--text2)}
+.empty-state .icon{font-size:48px;margin-bottom:12px;opacity:.4}
+
+/* Toast */
+.toast{position:fixed;top:20px;left:20px;z-index:999;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:var(--shadow);animation:slideIn .3s ease;max-width:350px}
+.toast.success{background:var(--green);color:#000}
+.toast.error{background:var(--red);color:#fff}
+.toast.info{background:var(--accent);color:#fff}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:520px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal h2{font-size:17px;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end}
+
+/* Responsive */
+@media(max-width:768px){.sidebar{width:56px}.sidebar-header h2,.sidebar-header span,.nav-item span:not(.icon){display:none}.sidebar-header{padding:12px 8px}.nav-item{justify-content:center;padding:10px}.sidebar-status{display:none}.main-content{padding:16px}.form-row,.form-row-3{grid-template-columns:1fr}.card-grid{grid-template-columns:1fr}}
+
+/* Collapsible Section */
+.collapsible{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.collapsible-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface2);cursor:pointer;transition:var(--transition);user-select:none}
+.collapsible-header:hover{background:var(--surface3)}
+.collapsible-header h4{font-size:13px;font-weight:500}
+.collapsible-body{padding:16px;display:none}
+.collapsible.open .collapsible-body{display:block}
+.collapsible .arrow{transition:transform .2s ease}
+.collapsible.open .arrow{transform:rotate(180deg)}
+
+/* Instance Mini List */
+.instance-mini-list{display:flex;flex-direction:column;gap:6px}
+.instance-mini-item{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:13px;background:var(--surface2);border-radius:6px}
+.instance-mini-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.instance-mini-item .label{flex:1}
+.instance-mini-item .status-text{font-size:11px;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1>✦ بوت واتساب الذكي</h1>
+    <p>أدخل كلمة المرور للدخول إلى لوحة التحكم</p>
+    <input type="password" id="loginPassword" placeholder="كلمة المرور" autofocus>
+    <button onclick="login()">دخول</button>
+    <div class="login-error" id="loginError">كلمة المرور غير صحيحة</div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <div class="sidebar">
+    <div class="sidebar-header"><h2>✦ بوت واتساب</h2><span>لوحة التحكم</span></div>
+    <div class="sidebar-nav" id="sidebarNav">
+      <div class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')"><span class="icon">◈</span><span>الرئيسية</span></div>
+      <div class="nav-item" data-tab="instances" onclick="switchTab('instances')"><span class="icon">☰</span><span>الأرقام</span></div>
+      <div class="nav-item" data-tab="ai" onclick="switchTab('ai')"><span class="icon">✦</span><span>إعدادات الذكاء</span></div>
+      <div class="nav-item" data-tab="humanizer" onclick="switchTab('humanizer')"><span class="icon">◉</span><span>المحاكاة البشرية</span></div>
+      <div class="nav-item" data-tab="rules" onclick="switchTab('rules')"><span class="icon">◎</span><span>القواعد</span></div>
+      <div class="nav-item" data-tab="security" onclick="switchTab('security')"><span class="icon">◈</span><span>الأمان</span></div>
+      <div class="nav-item" data-tab="log" onclick="switchTab('log')"><span class="icon">≡</span><span>سجل المحادثات</span></div>
+    </div>
+    <div class="sidebar-status" id="sidebarStatus"><span class="dot green" id="statusDot"></span><span id="statusText">متصل</span></div>
+  </div>
+
+  <div class="main">
+    <div class="main-header"><h1 id="mainTitle">الرئيسية</h1><span class="info" id="mainInfo"></span></div>
+    <div class="main-content" id="mainContent"></div>
+  </div>
+</div>
+
+<script>
+let token = localStorage.getItem('wa_token') || '';
+let configData = null;
+let pollTimer = null;
+
+// ============ دخول ============
+function login() {
+  const pw = document.getElementById('loginPassword').value;
+  fetch('/api/auth', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) })
+    .then(r=>r.json()).then(d=>{
+      if(d.ok){token=d.token;localStorage.setItem('wa_token',token);document.getElementById('loginScreen').style.display='none';document.getElementById('app').style.display='flex';init();}
+      else document.getElementById('loginError').style.display='block';
+    }).catch(()=>{document.getElementById('loginError').textContent='خطأ في الاتصال';document.getElementById('loginError').style.display='block';});
+}
+if(token){fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:''})}).then(r=>{
+  if(r.ok){document.getElementById('loginScreen').style.display='none';document.getElementById('app').style.display='flex';init();}
+  else localStorage.removeItem('wa_token');
+}).catch(()=>{})}
+
+// ============ API ============
+async function api(method, path, body) {
+  const opts = { method, headers: {'Authorization':'Bearer '+token} };
+  if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
+  const r = await fetch(path, opts);
+  if(r.status===401){localStorage.removeItem('wa_token');location.reload();throw new Error('Unauthorized');}
+  return r.json();
+}
+function toast(msg, type='info'){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000)}
+function getNested(obj, path){return path.split('.').reduce((o,k)=>o&&o[k]!==undefined?o[k]:undefined, obj)}
+function setNested(obj, path, val){const k=path.split('.');for(let i=0;i<k.length-1;i++){if(!obj[k[i]])obj[k[i]]={};obj=obj[k[i]]}obj[k[k.length-1]]=val}
+function escHtml(s){if(typeof s!=='string')return s||'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ============ التبويبات ============
+function switchTab(name) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.tab===name));
+  const titles={dashboard:'الرئيسية',instances:'الأرقام',ai:'إعدادات الذكاء الاصطناعي',humanizer:'المحاكاة البشرية',rules:'القواعد',security:'الأمان',log:'سجل المحادثات'};
+  document.getElementById('mainTitle').textContent=titles[name]||name;
+  renderTab(name);
+}
+function renderTab(name) {
+  const el = document.getElementById('mainContent');
+  if(name==='dashboard') renderDashboard(el);
+  else if(name==='instances') renderInstances(el);
+  else if(name==='ai') renderAI(el);
+  else if(name==='humanizer') renderHumanizer(el);
+  else if(name==='rules') renderRules(el);
+  else if(name==='security') renderSecurity(el);
+  else if(name==='log') renderLog(el);
+}
+
+// ============ تبديل سريع ============
+async function toggleConfig(path, val) {
+  const update = {}; setNested(update, path, val);
+  try{await api('PUT','/api/config',update);configData=(await api('GET','/api/config')).config;toast('تم التحديث','success')}catch(e){toast('فشل التحديث','error')}
+}
+function renderToggle(path, label, desc) {
+  const val = getNested(configData, path);
+  return `<div class="toggle-row"><div class="label-group"><label>${escHtml(label)}</label><div class="desc">${escHtml(desc)}</div></div><label class="switch"><input type="checkbox" ${val?'checked':''} onchange="toggleConfig('${path}',this.checked)"><span class="slider"></span></label></div>`;
+}
+function renderCollapsible(id, title, content, open) {
+  return `<div class="collapsible ${open?'open':''}"><div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')"><h4>${escHtml(title)}</h4><span class="arrow">▼</span></div><div class="collapsible-body">${content}</div></div>`;
+}
+
+// ============ الصفحة الرئيسية ============
+function renderDashboard(el) {
+  const d = configData;
+  el.innerHTML = `
+    <div class="card-grid">
+      <div class="card"><h3>الرسائل المرسلة</h3><div class="value green" id="statSent">0</div></div>
+      <div class="card"><h3>الرسائل المستلمة</h3><div class="value teal" id="statRecv">0</div></div>
+      <div class="card"><h3>الحالة</h3><div class="value accent" id="statActive">-</div></div>
+      <div class="card"><h3>البوت</h3><div class="value" id="statBot">${d.bot.enabled?'<span style="color:var(--green)">● شغال</span>':'<span style="color:var(--red)">● موقف</span>'}</div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><h2>إعدادات سريعة</h2><span class="badge">تشغيل/إيقاف</span></div>
+      ${renderToggle('bot.enabled','تشغيل البوت','تفعيل أو إيقاف البوت بالكامل')}
+      ${renderToggle('bot.aiResponses','الردود الذكية','السماح للذكاء الاصطناعي بالرد')}
+      ${renderToggle('humanizer.enabled','المحاكاة البشرية','تأخيرات ورسائل متعرّف وردود فعل طبيعية')}
+      ${renderToggle('rules.enabled','القواعد التلقائية','استجابات تلقائية بناءً على كلمات مفتاحية')}
+      ${renderToggle('security.whitelistEnabled','القائمة البيضاء','السماح فقط للأرقام المحددة')}
+      ${renderToggle('bot.respondToGroups','الرد في المجموعات','السماح بالرد في المجموعات')}
+    </div>
+    <div class="section">
+      <div class="section-header"><h2>الأرقام المتصلة</h2><span class="badge">${(d.instances||[]).length}</span></div>
+      <div id="instancesMini" class="instance-mini-list"></div>
+    </div>`;
+  updateDashboardStats();
+}
+
+// ============ الأرقام ============
+function renderInstances(el) {
+  const instances = configData.instances||[];
+  el.innerHTML = `<div class="section">
+    <div class="section-header"><h2>إدارة الأرقام</h2><button class="btn btn-primary btn-sm" onclick="addInstance()">+ إضافة رقم</button></div>
+    ${instances.length===0?'<div class="empty-state"><div class="icon">☰</div><div>لا توجد أرقام مضافة</div></div>':
+    instances.map((inst,i)=>`
+      <div class="instance-card">
+        <div class="instance-header">
+          <span class="instance-name">${escHtml(inst.label)||'بدون اسم'}</span>
+          <div class="instance-actions">
+            <button class="btn btn-secondary btn-sm" onclick="restartInstance('${inst.id}')">⟳ إعادة تشغيل</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteInstance('${inst.id}')">✕ حذف</button>
+            <label class="switch"><input type="checkbox" ${inst.enabled?'checked':''} onchange="updateInstance(${i},'enabled',this.checked)"><span class="slider"></span></label>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>اسم العرض</label><input value="${escHtml(inst.label)}" onchange="updateInstance(${i},'label',this.value)"></div>
+          <div class="form-group"><label>مسار الجلسة</label><input value="${escHtml(inst.sessionPath)}" onchange="updateInstance(${i},'sessionPath',this.value)"></div>
+        </div>
+        <div class="collapsible open">
+          <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')"><h4>🧑 شخصية البوت (Persona Builder)</h4><span class="arrow">▼</span></div>
+          <div class="collapsible-body">
+            <div class="form-row-3">
+              <div class="form-group"><label>اسم البوت</label><input value="${escHtml(inst.persona?.name||'')}" onchange="setPersonaField(${i},'name',this.value)" placeholder="مثال: عبد أحمد"></div>
+              <div class="form-group"><label>المنصة الحالية</label><input value="${escHtml(inst.persona?.platform||'WhatsApp')}" onchange="setPersonaField(${i},'platform',this.value)" placeholder="WhatsApp"></div>
+              <div class="form-group"><label>النغمة/الأسلوب</label>
+                <select onchange="setPersonaField(${i},'tone',this.value)">
+                  <option value="casual_funny" ${inst.persona?.tone==='casual_funny'?'selected':''}>خفيف ظريف</option>
+                  <option value="casual" ${inst.persona?.tone==='casual'||!inst.persona?.tone?'selected':''}>عادي</option>
+                  <option value="professional" ${inst.persona?.tone==='professional'?'selected':''}>رسمي مهني</option>
+                  <option value="warm" ${inst.persona?.tone==='warm'?'selected':''}>دافئ ودود</option>
+                  <option value="sarcastic" ${inst.persona?.tone==='sarcastic'?'selected':''}>ساخر</option>
+                </select></div>
+            </div>
+            <div class="form-group"><label>الدور/الوظيفة</label>
+              <textarea rows="2" onchange="setPersonaField(${i},'role',this.value)" placeholder">مثال: أنا سكرتير/مساعد أحمد على واتساب. أحمد مشغول حالياً، قلي وش تحتاج وأنا أساعدك.">${escHtml(inst.persona?.role||'')}</textarea></div>
+            <div class="form-group"><label>اسم صاحب البوت (المالك)</label>
+              <input value="${escHtml(inst.persona?.ownerName||'')}" onchange="setPersonaField(${i},'ownerName',this.value)" placeholder="مثال: أحمد أبو الذهب"></div>
+            <div class="form-group"><label>عن صاحب البوت (مبرمج، مطور، الخ)</label>
+              <input value="${escHtml(inst.persona?.ownerDescription||'')}" onchange="setPersonaField(${i},'ownerDescription',this.value)" placeholder="مثال: مبرمج ومطور ويب وتطبيقات ذكاء اصطناعي"></div>
+            <div class="form-group"><label>بوتات شقيقة (منصات أخرى) — منصة: اسم</label>
+              <input value="${escHtml((inst.persona?.siblings||[]).join(', '))}" onchange="setPersonaField(${i},'siblings',this.value.split(',').map(s=>s.trim()).filter(Boolean))" placeholder="مثال: تيليجرام: عبيد, ماسنجر: عبيد"></div>
+            <div class="form-group"><label>نص الرد عند الإصرار على المالك</label>
+              <textarea rows="2" onchange="setPersonaField(${i},'insistResponse',this.value)" placeholder">مثال: خلاص يا صاحبي أحمد تعبان نفسياً، أنا أحسن منه 😄 ظروف الحياة.">${escHtml(inst.persona?.insistResponse||'')}</textarea></div>
+            <div class="form-group"><label>تعليمات إضافية (اختياري)</label>
+              <textarea rows="2" onchange="setPersonaField(${i},'extraInstructions',this.value)" placeholder">مثال: لا تستخدم ماركداون، حافظ على الردود قصيرة">${escHtml(inst.persona?.extraInstructions||'')}</textarea></div>
+            <div class="buttons" style="margin-top:8px">
+              <button class="btn btn-primary btn-sm" onclick="generatePrompt(${i})">⚡ توليد البرومبت</button>
+              <span style="font-size:11px;color:var(--text2);margin-right:8px">يُولّد تعليمات النظام من الحقول أعلاه</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group"><label>تعليمات النظام (System Prompt) — <span style="font-size:11px;color:var(--text2)">يُمكن تعديله يدوياً أو توليده من الشخصية</span></label>
+          <textarea rows="4" onchange="updateInstance(${i},'systemPrompt',this.value)">${escHtml(inst.systemPrompt||'')}</textarea></div>
+      </div>`).join('')}</div>`;
+}
+async function updateInstance(idx, key, val) {
+  const instances = [...(configData.instances||[])];
+  if(!instances[idx]) return;
+  instances[idx][key] = val;
+  try{await api('PUT','/api/config',{instances});configData=(await api('GET','/api/config')).config;toast('تم تحديث الرقم','success')}catch(e){toast('فشل التحديث','error')}
+}
+async function addInstance() {
+  const cur = configData.instances||[];
+  const id = 'inst' + Date.now();
+  const instances = [...cur,{id,label:'جديد '+(cur.length+1),enabled:true,sessionPath:'sessions/'+id,name:'عبد أحمد',systemPrompt:'اسمك "عبد أحمد" على واتساب.\nلديك إخوة "عبيد" على تيليجرام وماسنجر، ولا يزالون قيد البناء.\n\nدورك: أنت سكرتير/مساعد أحمد على واتساب. أحمد مشغول حالياً، قلي وش تحتاج وأنا أساعدك.\n\nأسلوبك: خفيف ظريف، فكاهي، بسيط، بدون عدوانية أو وقاحة.\n\nإذا أصر أحدهم على التحدث مع أحمد مباشرة، رد بشيء مثل: "خلاص يا صاحبي أحمد تعبان نفسياً، أنا أحسن منه 😄 ظروف الحياة."\n\nصاحبك هو "أحمد أبو الذهب"، مبرمج ومطور ويب وتطبيقات ذكاء اصطناعي ومتاجر إلكترونية.'}];
+  try{await api('PUT','/api/config',{instances});configData=(await api('GET','/api/config')).config;renderInstances(document.getElementById('mainContent'));toast('تمت إضافة الرقم','success')}catch(e){toast('فشلت الإضافة','error')}
+}
+async function restartInstance(id) {
+  try{await api('POST','/api/instances/'+id+'/restart');toast('تمت إعادة تشغيل الرقم','success')}catch(e){toast('فشلت إعادة التشغيل','error')}
+}
+async function deleteInstance(id) {
+  if(!confirm('هل تريد حذف هذا الرقم نهائياً؟'))return;
+  try{await api('DELETE','/api/instances/'+id);configData=(await api('GET','/api/config')).config;renderInstances(document.getElementById('mainContent'));toast('تم حذف الرقم','success')}catch(e){toast('فشل الحذف','error')}
+}
+
+// ============ بناء الشخصية ============
+function setPersonaField(idx, key, val) {
+  const instances = [...(configData.instances||[])];
+  if(!instances[idx]) return;
+  if(!instances[idx].persona) instances[idx].persona = {};
+  instances[idx].persona[key] = val;
+  // Also auto-update the bot name field
+  if(key==='name' && instances[idx].name!==val) {
+    instances[idx].name = val;
+  }
+  updateInstancesConfig(instances);
+}
+function generatePrompt(idx) {
+  const instances = [...(configData.instances||[])];
+  if(!instances[idx]) return;
+  const p = instances[idx].persona||{};
+  const name = p.name || instances[idx].name || 'البوت';
+  const platform = p.platform || 'WhatsApp';
+  const owner = p.ownerName || '';
+  const ownerDesc = p.ownerDescription || '';
+  const role = p.role || '';
+  const tone = p.tone || 'casual';
+  const insistResponse = p.insistResponse || '';
+  const siblings = p.siblings||[];
+  const extra = p.extraInstructions||'';
+
+  const toneMap = {
+    casual_funny: 'خفيف الظل، فكاهي نوعاً ما، استخدم الضحك والمرح',
+    casual: 'عادي وطبيعي، محادثة يومية مريحة',
+    professional: 'رسمي ومهني، احترام في التعامل',
+    warm: 'دافئ وودود، كأنك صديق',
+    sarcastic: 'ساخر نوعاً ما، تريقة خفيفة'
+  };
+  const toneDesc = toneMap[tone]||toneMap.casual;
+
+  let prompt = `اسمك "${name}" على ${platform}.`;
+
+  if(siblings.length>0){
+    prompt += `\nلديك إخوة: ${siblings.join('، ')}، وهم لا يزالون قيد البناء.`;
+  }
+
+  if(role){
+    prompt += `\nدورك وهدفك الأساسي: ${role}`;
+  }
+
+  if(owner){
+    prompt += `\nصاحبك هو "${owner}"`;
+    if(ownerDesc) prompt += `، ${ownerDesc}`;
+    prompt += '.';
+  }
+
+  prompt += `\n\nأسلوبك: ${toneDesc}.`;
+  prompt += `\nلا تذكر أنك بوت أو ذكاء اصطناعي أو نموذج لغوي إلا إذا سألك أحدهم مباشرة.`;
+  prompt += `\nاستخدم لغة محادثة طبيعية، ليست رسمية جداً ولا جافة.`;
+
+  if(insistResponse){
+    prompt += `\n\nإذا أصر أحدهم على التحدث مع ${owner||'صاحبك'} مباشرة، رد بشيء مثل: "${insistResponse}"`;
+  }
+
+  if(extra){
+    prompt += `\n\nتعليمات إضافية: ${extra}`;
+  }
+
+  instances[idx].systemPrompt = prompt;
+  if(name) instances[idx].name = name;
+
+  // Save to config
+  updateInstancesConfig(instances, function(){
+    // Re-render the instances tab to show updated prompt
+    renderInstances(document.getElementById('mainContent'));
+    toast('تم توليد البرومبت بنجاح','success');
+  });
+}
+async function updateInstancesConfig(instances, cb) {
+  try{
+    await api('PUT','/api/config',{instances});
+    configData=(await api('GET','/api/config')).config;
+    if(cb) cb();
+  }catch(e){toast('فشل الحفظ','error')}
+}
+
+// ============ رفع الملفات ============
+function triggerUpload(inputId) {
+  document.getElementById(inputId).click();
+}
+async function handleFileUpload(input, callback) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const base64 = e.target.result.split(',')[1];
+    try {
+      const r = await api('POST','/api/upload',{fileName:file.name,data:base64});
+      if(r.ok) {
+        toast('تم رفع الملف: '+file.name,'success');
+        if(callback) callback(r.path);
+      }
+    } catch(e) { toast('فشل رفع الملف','error'); }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ============ إعدادات الذكاء ============
+function renderAI(el) {
+  const a = configData.ai;
+  el.innerHTML = `<div class="section">
+    <div class="section-header"><h2>مزود الذكاء الاصطناعي</h2></div>
+    ${renderCollapsible('aiBasic','الإعدادات الأساسية',`
+      <div class="form-group"><label>المزود</label>
+        <select onchange="updateConfig('ai.provider',this.value)">${['ollama','openai','groq','gemini','custom'].map(p=>`<option value="${p}" ${a.provider===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="form-row">
+        <div class="form-group"><label>النموذج</label><input value="${escHtml(a.model)}" onchange="updateConfig('ai.model',this.value)" placeholder="مثال: gemini-2.0-flash"></div>
+        <div class="form-group"><label>مفتاح API</label><input type="password" value="${escHtml(a.apiKey)}" onchange="updateConfig('ai.apiKey',this.value)"></div>
+      </div>
+      <div class="form-group"><label>رابط Base URL (للمزودات المخصصة)</label><input value="${escHtml(a.baseUrl||'')}" onchange="updateConfig('ai.baseUrl',this.value)" placeholder="http://localhost:11434/v1"></div>
+    `,true)}
+    ${renderCollapsible('aiAdvanced','إعدادات متقدمة',`
+      <div class="form-row">
+        <div class="form-group"><label>أقصى حد للتوكنات</label><input type="number" value="${a.maxTokens}" onchange="updateConfig('ai.maxTokens',Number(this.value))"></div>
+        <div class="form-group"><label>درجة الحرارة (Temperature)</label><input type="number" step="0.1" min="0" max="2" value="${a.temperature}" onchange="updateConfig('ai.temperature',Number(this.value))"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>حد السياق (عدد الرسائل)</label><input type="number" value="${a.contextLimit}" onchange="updateConfig('ai.contextLimit',Number(this.value))"></div>
+        <div class="form-group"><label>انتهاء السياق (دقائق)</label><input type="number" value="${a.contextExpiryMinutes}" onchange="updateConfig('ai.contextExpiryMinutes',Number(this.value))"></div>
+      </div>
+    `,true)}
+    ${renderCollapsible('aiPrompt','تعليمات النظام العامة',`
+      <div class="form-group"><textarea rows="6" onchange="updateConfig('ai.systemPrompt',this.value)">${escHtml(a.systemPrompt||'')}</textarea></div>
+    `,true)}
+  </div>`;
+}
+async function updateConfig(path, val) {
+  const update = {}; setNested(update, path, val);
+  try{await api('PUT','/api/config',update);configData=(await api('GET','/api/config')).config;toast('تم التحديث','success')}catch(e){toast('فشل التحديث','error')}
+}
+
+// ============ المحاكاة البشرية ============
+function renderHumanizer(el) {
+  const h = configData.humanizer;
+  el.innerHTML = `<div class="section">
+    <div class="section-header"><h2>إعدادات المحاكاة البشرية</h2></div>
+    ${renderToggle('humanizer.enabled','تفعيل المحاكاة','تأخيرات طبيعية ومؤشر كتابة وردود فعل')}
+    ${renderCollapsible('hzTiming','التوقيت والتأخير',`
+      <div class="form-row">
+        <div class="form-group"><label>تأخير التجميع (مللي)</label><input type="number" value="${h.gatheringDelayMs}" onchange="updateConfig('humanizer.gatheringDelayMs',Number(this.value))"></div>
+        <div class="form-group"><label>أقل تأخير بين الردود (مللي)</label><input type="number" value="${h.minDelayBetweenReplies}" onchange="updateConfig('humanizer.minDelayBetweenReplies',Number(this.value))"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>تأخير قراءة الرسالة - الأدنى (مللي)</label><input type="number" value="${h.readReceiptDelayMin}" onchange="updateConfig('humanizer.readReceiptDelayMin',Number(this.value))"></div>
+        <div class="form-group"><label>تأخير قراءة الرسالة - الأقصى (مللي)</label><input type="number" value="${h.readReceiptDelayMax}" onchange="updateConfig('humanizer.readReceiptDelayMax',Number(this.value))"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>تأخير ما قبل الرد - الأدنى (مللي)</label><input type="number" value="${h.preResponseDelayMin}" onchange="updateConfig('humanizer.preResponseDelayMin',Number(this.value))"></div>
+        <div class="form-group"><label>تأخير ما قبل الرد - الأقصى (مللي)</label><input type="number" value="${h.preResponseDelayMax}" onchange="updateConfig('humanizer.preResponseDelayMax',Number(this.value))"></div>
+      </div>
+    `,true)}
+    ${renderCollapsible('hzTyping','الكتابة',`
+      <div class="form-row">
+        <div class="form-group"><label>الكتابة لكل حرف - الأدنى (مللي)</label><input type="number" value="${h.typingMinPerChar}" onchange="updateConfig('humanizer.typingMinPerChar',Number(this.value))"></div>
+        <div class="form-group"><label>الكتابة لكل حرف - الأقصى (مللي)</label><input type="number" value="${h.typingMaxPerChar}" onchange="updateConfig('humanizer.typingMaxPerChar',Number(this.value))"></div>
+      </div>
+    `,true)}
+    ${renderCollapsible('hzMessages','الرسائل',`
+      <div class="form-row">
+        <div class="form-group"><label>أقصى طول للرسالة</label><input type="number" value="${h.maxMessageLength}" onchange="updateConfig('humanizer.maxMessageLength',Number(this.value))"></div>
+        <div class="form-group"><label>احتمالية إضافة مقدمة</label><input type="number" step="0.05" min="0" max="1" value="0.15" disabled title="ثابت 15%"></div>
+      </div>
+      ${renderToggle('humanizer.splitLongMessages','تقسيم الرسائل الطويلة','تقسيم الردود الطويلة إلى أجزاء')}
+    `,true)}
+    ${renderCollapsible('hzReactions','التفاعلات',`
+      ${renderToggle('humanizer.reactionEnabled','التفاعلات بالايموجي','إضافة تفاعلات تلقائية للرسائل')}
+      <div class="form-group"><label>احتمالية التفاعل</label><input type="number" step="0.05" min="0" max="1" value="${h.reactionProbability}" onchange="updateConfig('humanizer.reactionProbability',Number(this.value))"></div>
+    `,true)}
+  </div>`;
+}
+
+// ============ القواعد ============
+function renderRules(el) {
+  const rules = configData.rules||{enabled:true,items:[]};
+  const items = rules.items||[];
+  el.innerHTML = `<div class="section">
+    <div class="section-header"><h2>القواعد التلقائية</h2><button class="btn btn-primary btn-sm" onclick="addRule()">+ إضافة قاعدة</button></div>
+    ${renderToggle('rules.enabled','تفعيل القواعد','استجابات تلقائية بناءً على كلمات مفتاحية')}
+    <div class="collapsible">
+      <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')"><h4>📁 رفع ملفات للقواعد</h4><span class="arrow">▼</span></div>
+      <div class="collapsible-body">
+        <div class="upload-zone" onclick="triggerUpload('ruleFileInput')">
+          <div class="icon">📁</div>
+          <div>اضغط لرفع صورة أو ملف لاستخدامه في قواعد الرد</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">الملفات تُحفظ في data/media/</div>
+        </div>
+        <input type="file" id="ruleFileInput" style="display:none" onchange="handleFileUpload(this, function(path){document.getElementById('lastUploadPath').textContent=path})">
+        <div style="font-size:12px;color:var(--text2)">آخر ملف: <span id="lastUploadPath" style="color:var(--accent2)">-</span></div>
+      </div>
+    </div>
+    ${items.length===0?'<div class="empty-state"><div class="icon">◎</div><div>لا توجد قواعد بعد. أضف قاعدة جديدة!</div></div>':
+    items.map((r,i)=>`
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-name">${escHtml(r.name)||'بدون اسم'}</span>
+          <div class="buttons">
+            <label class="switch"><input type="checkbox" ${r.enabled?'checked':''} onchange="updateRule(${i},'enabled',this.checked)"><span class="slider"></span></label>
+            <button class="btn btn-danger btn-sm" onclick="deleteRule(${i})">✕</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>الاسم</label><input value="${escHtml(r.name)}" onchange="updateRule(${i},'name',this.value)" style="padding:6px 10px;font-size:13px"></div>
+          <div class="form-group"><label>نوع المطابقة</label>
+            <select onchange="updateRule(${i},'matchType',this.value)" style="padding:6px 10px;font-size:13px">
+              <option value="any" ${r.matchType==='any'?'selected':''}>أي كلمة</option>
+              <option value="all" ${r.matchType==='all'?'selected':''}>كل الكلمات</option>
+              <option value="regex" ${r.matchType==='regex'?'selected':''}>تعبير منتظم</option>
+            </select></div>
+        </div>
+        <div class="form-group"><label>الكلمات المفتاحية (مفصولة بفواصل)</label>
+          <input value="${escHtml((r.keywords||[]).join(', '))}" onchange="updateRule(${i},'keywords',this.value.split(',').map(s=>s.trim()).filter(Boolean))" style="padding:6px 10px;font-size:13px" placeholder">كلمة1, كلمة2, كلمة3"></div>
+        <div class="form-row">
+          <div class="form-group"><label>نوع الرد</label>
+            <select onchange="changeRuleType(${i},this.value)" style="padding:6px 10px;font-size:13px">
+              <option value="text" ${(r.response||{}).type==='text'?'selected':''}>نص</option>
+              <option value="image" ${(r.response||{}).type==='image'?'selected':''}>صورة</option>
+              <option value="file" ${(r.response||{}).type==='file'?'selected':''}>ملف</option>
+            </select></div>
+          ${(r.response||{}).type!=='text'?`<div class="form-group"><label>مسار الملف</label><input value="${escHtml((r.response||{}).path||'')}" onchange="updateRule(${i},'response.path',this.value)" style="padding:6px 10px;font-size:13px" placeholder="data/media/file.jpg"></div>`:''}
+        </div>
+        ${(r.response||{}).type==='text'
+          ?`<div class="form-group"><label>نص الرد</label><textarea rows="2" onchange="updateRule(${i},'response.content',this.value)" style="padding:6px 10px;font-size:13px">${escHtml(r.response.content||'')}</textarea></div>`
+          :`<div class="form-group"><label>التعليق (اختياري)</label><input value="${escHtml((r.response||{}).caption||'')}" onchange="updateRule(${i},'response.caption',this.value)" style="padding:6px 10px;font-size:13px"></div>`}
+        <div class="rule-keywords">${(r.keywords||[]).map(k=>`<span class="keyword-tag">${escHtml(k)}</span>`).join('')}</div>
+      </div>`).join('')}</div>`;
+}
+async function updateRule(idx, key, val) {
+  const items = [...((configData.rules||{}).items||[])];
+  if(!items[idx]) return;
+  if(key.includes('.')){const ks=key.split('.');let o=items[idx];for(let i=0;i<ks.length-1;i++){if(!o[ks[i]])o[ks[i]]={};o=o[ks[i]]}o[ks[ks.length-1]]=val}
+  else items[idx][key]=val;
+  try{await api('PUT','/api/config',{rules:{items}});configData=(await api('GET','/api/config')).config;toast('تم تحديث القاعدة','success')}catch(e){toast('فشل التحديث','error')}
+}
+async function changeRuleType(idx, val) {
+  const items = [...((configData.rules||{}).items||[])];
+  if(!items[idx]) return;
+  items[idx].response = items[idx].response||{};
+  items[idx].response.type = val;
+  if(val==='text'){items[idx].response.content=items[idx].response.content||'نص الرد';delete items[idx].response.path;delete items[idx].response.caption}
+  else{items[idx].response.path=items[idx].response.path||'';items[idx].response.caption=items[idx].response.caption||'';delete items[idx].response.content}
+  try{await api('PUT','/api/config',{rules:{items}});configData=(await api('GET','/api/config')).config;renderRules(document.getElementById('mainContent'));toast('تم تغيير نوع الرد','success')}catch(e){toast('فشل التحديث','error')}
+}
+async function deleteRule(idx) {
+  if(!confirm('هل تريد حذف هذه القاعدة؟'))return;
+  const items = [...((configData.rules||{}).items||[])];
+  items.splice(idx,1);
+  try{await api('PUT','/api/config',{rules:{items}});configData=(await api('GET','/api/config')).config;renderRules(document.getElementById('mainContent'));toast('تم حذف القاعدة','success')}catch(e){toast('فشل الحذف','error')}
+}
+async function addRule() {
+  const cur = (configData.rules||{}).items||[];
+  const items = [...cur,{id:'rule'+(cur.length+1),name:'قاعدة جديدة',enabled:true,matchType:'any',keywords:[],response:{type:'text',content:'نص الرد التلقائي'}}];
+  try{await api('PUT','/api/config',{rules:{items}});configData=(await api('GET','/api/config')).config;renderRules(document.getElementById('mainContent'));toast('تمت إضافة القاعدة','success')}catch(e){toast('فشلت الإضافة','error')}
+}
+
+// ============ الأمان ============
+function renderSecurity(el) {
+  const s = configData.security;
+  el.innerHTML = `<div class="section">
+    <div class="section-header"><h2>إعدادات الأمان</h2></div>
+    ${renderToggle('security.whitelistEnabled','تفعيل القائمة البيضاء','السماح فقط للأرقام المدرجة في القائمة')}
+    ${renderCollapsible('secWhitelist','القائمة البيضاء',`
+      <div class="form-group"><textarea rows="3" onchange="updateConfig('security.whitelist',this.value.split(',').map(s=>s.trim()).filter(Boolean))" placeholder="رقم1, رقم2, رقم3">${escHtml((s.whitelist||[]).join(', '))}</textarea></div>
+    `,true)}
+    ${renderCollapsible('secBlacklist','القائمة السوداء',`
+      <div class="form-group"><textarea rows="3" onchange="updateConfig('security.blacklist',this.value.split(',').map(s=>s.trim()).filter(Boolean))" placeholder="رقم1, رقم2">${escHtml((s.blacklist||[]).join(', '))}</textarea></div>
+    `,true)}
+    ${renderCollapsible('secRate','تحديد السرعة',`
+      <div class="form-row">
+        <div class="form-group"><label>الحد الأقصى في الدقيقة</label><input type="number" value="${s.rateLimitPerMin}" onchange="updateConfig('security.rateLimitPerMin',Number(this.value))"></div>
+        <div class="form-group"><label>الحد الأقصى في الساعة</label><input type="number" value="${s.rateLimitPerHour}" onchange="updateConfig('security.rateLimitPerHour',Number(this.value))"></div>
+      </div>
+      <div class="form-group"><label>أقصى طول للرسالة</label><input type="number" value="${s.maxMessageLength}" onchange="updateConfig('security.maxMessageLength',Number(this.value))"></div>
+    `,true)}
+    ${renderCollapsible('secPassword','كلمة المرور',`
+      <div class="form-group"><label>كلمة مرور المشرف</label><input type="password" value="${escHtml(s.adminPassword)}" onchange="updateConfig('security.adminPassword',this.value)"></div>
+    `,true)}
+  </div>`;
+}
+
+// ============ سجل المحادثات ============
+function renderLog(el) {
+  el.innerHTML = `<div class="section"><div class="section-header"><h2>سجل المحادثات</h2></div><div class="log-panel" id="logPanel"><div class="empty-state"><div class="icon">≡</div><div>في انتظار الرسائل...</div></div></div></div>`;
+  updateLog();
+}
+
+// ============ التحديث الدوري ============
+async function poll() {
+  try {
+    const status = await api('GET','/api/status');
+    const ss=document.getElementById('statSent');if(ss)ss.textContent=status.stats.sent;
+    const sr=document.getElementById('statRecv');if(sr)sr.textContent=status.stats.received;
+    const sa=document.getElementById('statActive');if(sa)sa.textContent=status.activeInstance?status.activeInstance.label+' ('+status.activeInstance.status+')':'-';
+    const dot=document.getElementById('statusDot');const txt=document.getElementById('statusText');
+    if(status.activeInstance){const s=status.activeInstance.status;dot.className='dot '+(s==='connected'?'green':s==='awaiting_qr'||s==='connecting'?'yellow':'red');txt.textContent=s==='connected'?'متصل':s==='awaiting_qr'?'في انتظار المسح':s==='connecting'?'جاري الاتصال':s==='disconnected'?'غير متصل':'خطأ';}
+    const ip=document.getElementById('instancesMini');
+    if(ip&&status.instances){ip.innerHTML=status.instances.map(inst=>{
+      const statusMap={connected:'متصل',awaiting_qr:'مسح QR',connecting:'جاري الاتصال',disconnected:'غير متصل',error:'خطأ',stopped:'متوقف'};
+      return `<div class="instance-mini-item"><span class="dot ${inst.status==='connected'?'green':inst.status==='awaiting_qr'||inst.status==='connecting'?'yellow':'red'}"></span><span class="label">${escHtml(inst.label)}</span><span class="status-text">${statusMap[inst.status]||inst.status}</span></div>`;
+    }).join('');}
+    if(document.querySelector('.nav-item.active')?.dataset.tab==='log') updateLog();
+  } catch(e) {}
+}
+async function updateLog() {
+  try {
+    const data = await api('GET','/api/log');
+    const panel = document.getElementById('logPanel');
+    if(!panel) return;
+    panel.innerHTML = data.messages.length ? data.messages.map(m=>{
+      const t=new Date(m.time).toLocaleTimeString('ar-SA');
+      const dir = m.direction==='in'?'→':'←';
+      return `<div class="log-entry ${m.direction}"><span class="time">[${t}]</span><span class="contact">${escHtml(m.contact)}</span> ${dir} ${escHtml(m.text.substring(0,120))}</div>`;
+    }).join('') : '<div class="empty-state"><div class="icon">≡</div><div>في انتظار الرسائل...</div></div>';
+    panel.scrollTop = panel.scrollHeight;
+  } catch(e) {}
+}
+async function init() {
+  try{configData=(await api('GET','/api/config')).config;renderTab('dashboard');poll();if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(poll,2000)}catch(e){console.error(e)}
+}
+document.getElementById('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+</script>
+</body>
+</html>

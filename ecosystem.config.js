@@ -1,0 +1,25 @@
+module.exports = {
+  apps: [{
+    name: 'whatsapp-ai-bot',
+    script: 'src/index.js',
+    cwd: __dirname,
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production',
+      AI_PROVIDER: 'gemini',
+      AI_MODEL: 'gemini-3-flash-preview',
+      AI_API_KEY: '',
+      AI_BASE_URL: '',
+      ADMIN_PASSWORD: 'changeme123',
+    },
+    error_file: 'logs/pm2-error.log',
+    out_file: 'logs/pm2-out.log',
+    merge_logs: true,
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    kill_timeout: 10000,
+    shutdown_with_message: true,
+  }],
+};
